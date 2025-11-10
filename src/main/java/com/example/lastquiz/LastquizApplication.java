@@ -1,8 +1,9 @@
 package com.example.lastquiz;
 
-import com.example.lastquiz.entity.Subscription;
-import com.example.lastquiz.entity.User;
+import com.example.lastquiz.entity.*;
+import com.example.lastquiz.repository.AdminRepository;
 import com.example.lastquiz.repository.SubscriptionRepository;
+import com.example.lastquiz.service.ComplaintService;
 import com.example.lastquiz.service.UserManagementService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
@@ -11,6 +12,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.Scanner;
 
@@ -23,6 +25,12 @@ public class LastquizApplication implements CommandLineRunner {
     @Autowired
     private SubscriptionRepository subscriptionRepository;
 
+    @Autowired
+    private ComplaintService complaintService;
+
+    @Autowired
+    private AdminRepository adminRepository;
+
     public static void main(String[] args) {
         SpringApplication.run(LastquizApplication.class, args);
     }
@@ -30,12 +38,13 @@ public class LastquizApplication implements CommandLineRunner {
     @Override
     public void run(String... args) {
         Scanner scanner = new Scanner(System.in);
-
         boolean running = true;
+
         while (running) {
             System.out.println("\n=== MENU PRINCIPAL ===");
             System.out.println("1) Gérer les utilisateurs");
             System.out.println("2) Gérer les subscriptions");
+            System.out.println("3) Gérer les réclamations");
             System.out.println("0) Quitter");
             System.out.print("Choisissez une option : ");
             String mainChoice = scanner.nextLine().trim();
@@ -43,6 +52,7 @@ public class LastquizApplication implements CommandLineRunner {
             switch (mainChoice) {
                 case "1" -> manageUsers(scanner);
                 case "2" -> manageSubscriptions(scanner);
+                case "3" -> manageComplaints(scanner);
                 case "0" -> {
                     running = false;
                     System.out.println("Fin du programme.");
@@ -53,7 +63,7 @@ public class LastquizApplication implements CommandLineRunner {
         scanner.close();
     }
 
-    // ---------- Users ----------
+    // ====================== 🔹 MENU UTILISATEURS ======================
     private void manageUsers(Scanner scanner) {
         System.out.println("\n=== MENU UTILISATEUR ===");
         System.out.println("1 - Créer un utilisateur");
@@ -111,15 +121,12 @@ public class LastquizApplication implements CommandLineRunner {
                 .email(email)
                 .password(password)
                 .role(role)
-                .createdAt(Timestamp.valueOf(LocalDateTime.now()))// pour éviter les erreurs d'intégrité
+                .createdAt(Timestamp.valueOf(LocalDateTime.now()))
                 .build();
 
-        // Utiliser ton service pour gérer la création
         userManagementService.createUser(user, firstName, lastName, extraInfo);
-
         System.out.println("✅ Utilisateur créé avec succès !");
     }
-
 
     private void updateUserConsole(Scanner scanner) {
         System.out.print("Entrez l'ID de l'utilisateur à modifier : ");
@@ -159,7 +166,7 @@ public class LastquizApplication implements CommandLineRunner {
         }
     }
 
-    // ---------- Subscriptions ----------
+    // ====================== 🔹 MENU SUBSCRIPTIONS ======================
     private void manageSubscriptions(Scanner scanner) {
         System.out.println("\n=== MENU SUBSCRIPTION ===");
         System.out.println("1 - Créer une subscription");
@@ -225,7 +232,7 @@ public class LastquizApplication implements CommandLineRunner {
             try {
                 s.setPrice(Double.parseDouble(priceStr));
             } catch (NumberFormatException e) {
-                System.out.println("Prix invalide, la valeur n'a pas été changée.");
+                System.out.println("Prix invalide, inchangé.");
             }
         }
 
@@ -235,7 +242,7 @@ public class LastquizApplication implements CommandLineRunner {
             try {
                 s.setDurationDays(Integer.parseInt(durStr));
             } catch (NumberFormatException e) {
-                System.out.println("Durée invalide, la valeur n'a pas été changée.");
+                System.out.println("Durée invalide, inchangée.");
             }
         }
 
@@ -255,7 +262,7 @@ public class LastquizApplication implements CommandLineRunner {
         }
         Subscription s = opt.get();
 
-        System.out.print("Confirmez la suppression de la subscription '" + s.getName() + "' (oui/non) : ");
+        System.out.print("Confirmez la suppression de '" + s.getName() + "' (oui/non) : ");
         String confirm = scanner.nextLine().trim().toLowerCase();
         if ("oui".equals(confirm) || "o".equals(confirm) || "yes".equals(confirm)) {
             subscriptionRepository.delete(s);
@@ -265,13 +272,90 @@ public class LastquizApplication implements CommandLineRunner {
         }
     }
 
-    // ---------- Helpers ----------
+    // ====================== 🔹 MENU RECLAMATIONS ======================
+    private void manageComplaints(Scanner scanner) {
+        System.out.println("\n=== MENU RÉCLAMATIONS ===");
+        System.out.println("1 - Afficher toutes les réclamations");
+        System.out.println("2 - Modifier le statut d'une réclamation");
+        System.out.println("3 - Répondre à une réclamation");
+        System.out.print("Choisissez une option : ");
+        String choice = scanner.nextLine().trim();
+
+        switch (choice) {
+            case "1" -> viewAllComplaints();
+            case "2" -> updateComplaintStatus(scanner);
+            case "3" -> respondToComplaint(scanner);
+            default -> System.out.println("Choix invalide.");
+        }
+    }
+
+    private void viewAllComplaints() {
+        List<Complaint> complaints = complaintService.getAllComplaints();
+        if (complaints.isEmpty()) {
+            System.out.println("Aucune réclamation trouvée.");
+            return;
+        }
+
+        System.out.println("\n=== LISTE DES RÉCLAMATIONS ===");
+        for (Complaint c : complaints) {
+            System.out.printf(
+                    "ID: %d | Étudiant: %s %s | Sujet: %s | Statut: %s%n",
+                    c.getId(),
+                    c.getStudent() != null ? c.getStudent().getFirstName() : "N/A",
+                    c.getStudent() != null ? c.getStudent().getLastName() : "",
+                    c.getSubject(),
+                    c.getStatus()
+            );
+        }
+    }
+
+    private void updateComplaintStatus(Scanner scanner) {
+        System.out.print("Entrez l'ID de la réclamation à modifier : ");
+        Integer id = readInt(scanner);
+        if (id == null) return;
+
+        System.out.println("Statuts : PENDING, IN_PROGRESS, RESOLVED, REJECTED");
+        System.out.print("Nouveau statut : ");
+        String statusStr = scanner.nextLine().trim().toUpperCase();
+
+        try {
+            Complaint.Status newStatus = Complaint.Status.valueOf(statusStr);
+            complaintService.updateStatus(id, newStatus);
+            System.out.println("✅ Statut mis à jour !");
+        } catch (IllegalArgumentException e) {
+            System.out.println("❌ Statut invalide !");
+        }
+    }
+
+    private void respondToComplaint(Scanner scanner) {
+        System.out.print("ID de la réclamation : ");
+        Integer id = readInt(scanner);
+        if (id == null) return;
+
+        System.out.print("ID de l'admin : ");
+        Integer adminId = readInt(scanner);
+        if (adminId == null) return;
+
+        Optional<Admin> adminOpt = adminRepository.findById(adminId);
+        if (adminOpt.isEmpty()) {
+            System.out.println("❌ Admin introuvable !");
+            return;
+        }
+
+        System.out.print("Réponse : ");
+        String response = scanner.nextLine();
+
+        complaintService.respondToComplaint(id, response, adminId, adminOpt.get());
+        System.out.println("✅ Réponse enregistrée !");
+    }
+
+    // ====================== 🔹 Helpers ======================
     private Integer readInt(Scanner scanner) {
         String line = scanner.nextLine().trim();
         try {
             return Integer.parseInt(line);
         } catch (NumberFormatException e) {
-            System.out.println("Entrée invalide (entier attendu). Opération annulée.");
+            System.out.println("Entrée invalide (entier attendu).");
             return null;
         }
     }
@@ -281,7 +365,7 @@ public class LastquizApplication implements CommandLineRunner {
         try {
             return Double.parseDouble(line);
         } catch (NumberFormatException e) {
-            System.out.println("Entrée invalide (nombre attendu). Opération annulée.");
+            System.out.println("Entrée invalide (nombre attendu).");
             return null;
         }
     }
