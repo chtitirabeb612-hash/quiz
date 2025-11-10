@@ -1,7 +1,11 @@
 package com.example.lastquiz.controller;
 
+import com.example.lastquiz.entity.Admin;
 import com.example.lastquiz.entity.Quiz;
+import com.example.lastquiz.entity.QuizValidation;
+import com.example.lastquiz.service.AdminService;
 import com.example.lastquiz.service.QuizService;
+import com.example.lastquiz.service.QuizValidationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -36,7 +40,9 @@ public class QuizController {
     public ResponseEntity<Void> deleteQuiz(@PathVariable Integer id) {
         quizService.deleteQuiz(id);
         return ResponseEntity.noContent().build();
-    }
-}
+    }}
+
+
+
 
 
