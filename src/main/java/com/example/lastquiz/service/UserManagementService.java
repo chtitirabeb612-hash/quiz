@@ -2,6 +2,7 @@ package com.example.lastquiz.service;
 
 import com.example.lastquiz.entity.*;
 import com.example.lastquiz.repository.*;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -19,6 +20,7 @@ public class UserManagementService {
     private final PasswordEncoder passwordEncoder;
 
     // ---------- Création ----------
+    @Transactional
     public void createUser(User user, String firstName, String lastName, String extraInfo) {
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         User savedUser = userRepository.save(user);

@@ -5,6 +5,9 @@ import com.example.lastquiz.repository.AdminRepository;
 import com.example.lastquiz.repository.SubscriptionRepository;
 import com.example.lastquiz.service.ComplaintService;
 import com.example.lastquiz.service.UserManagementService;
+import com.example.lastquiz.service.QuizService;
+import com.example.lastquiz.service.QuizValidationService;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -31,6 +34,12 @@ public class LastquizApplication implements CommandLineRunner {
     @Autowired
     private AdminRepository adminRepository;
 
+    @Autowired
+    private QuizService quizService;
+
+    @Autowired
+    private QuizValidationService quizValidationService;
+
     public static void main(String[] args) {
         SpringApplication.run(LastquizApplication.class, args);
     }
@@ -45,6 +54,7 @@ public class LastquizApplication implements CommandLineRunner {
             System.out.println("1) Gérer les utilisateurs");
             System.out.println("2) Gérer les subscriptions");
             System.out.println("3) Gérer les réclamations");
+            System.out.println("4) Gérer les quiz");  // 🔹 AJOUTÉ
             System.out.println("0) Quitter");
             System.out.print("Choisissez une option : ");
             String mainChoice = scanner.nextLine().trim();
@@ -53,6 +63,7 @@ public class LastquizApplication implements CommandLineRunner {
                 case "1" -> manageUsers(scanner);
                 case "2" -> manageSubscriptions(scanner);
                 case "3" -> manageComplaints(scanner);
+                case "4" -> manageQuizzes(scanner);    // 🔹 AJOUTÉ
                 case "0" -> {
                     running = false;
                     System.out.println("Fin du programme.");
@@ -83,13 +94,10 @@ public class LastquizApplication implements CommandLineRunner {
     private void createUserConsole(Scanner scanner) {
         System.out.print("Nom d'utilisateur : ");
         String username = scanner.nextLine();
-
         System.out.print("Email : ");
         String email = scanner.nextLine();
-
         System.out.print("Mot de passe : ");
         String password = scanner.nextLine();
-
         System.out.print("Rôle (STUDENT/PROFESSOR/ADMIN) : ");
         String roleStr = scanner.nextLine().toUpperCase();
 
@@ -103,7 +111,6 @@ public class LastquizApplication implements CommandLineRunner {
 
         System.out.print("Prénom : ");
         String firstName = scanner.nextLine();
-
         System.out.print("Nom : ");
         String lastName = scanner.nextLine();
 
@@ -347,6 +354,76 @@ public class LastquizApplication implements CommandLineRunner {
 
         complaintService.respondToComplaint(id, response, adminId, adminOpt.get());
         System.out.println("✅ Réponse enregistrée !");
+    }
+
+    // ====================== 🔹 MENU QUIZ (NOUVEAU) ======================
+    private void manageQuizzes(Scanner scanner) {
+        System.out.println("\n=== MENU QUIZ ===");
+        System.out.println("1 - Afficher tous les quiz");
+        System.out.println("2 - Valider un quiz");
+        System.out.print("Choisissez une option : ");
+        String choice = scanner.nextLine().trim();
+
+        switch (choice) {
+            case "1" -> viewAllQuizzes();
+            case "2" -> validateQuizConsole(scanner);
+            default -> System.out.println("Choix invalide.");
+        }
+    }
+
+    private void viewAllQuizzes() {
+        List<Quiz> quizzes = quizService.getAllQuizzes();
+
+        if (quizzes.isEmpty()) {
+            System.out.println("Aucun quiz trouvé.");
+            return;
+        }
+
+        System.out.println("\n=== LISTE DES QUIZ ===");
+        for (Quiz q : quizzes) {
+            System.out.printf(
+                    "ID: %d | Titre: %s | Professeur: %s %s | Code: %s | Durée: %d min%n",
+                    q.getId(),
+                    q.getTitle(),
+                    q.getProfessor() != null ? q.getProfessor().getFirstName() : "N/A",
+                    q.getProfessor() != null ? q.getProfessor().getLastName() : "",
+                    q.getCode(),
+                    q.getDuration()
+            );
+        }
+    }
+
+    private void validateQuizConsole(Scanner scanner) {
+        System.out.print("Entrez l'ID du quiz à valider : ");
+        Integer quizId = readInt(scanner);
+        if (quizId == null) return;
+
+        Quiz quiz = quizService.getQuizById(quizId);
+        if (quiz == null) {
+            System.out.println("❌ Quiz introuvable !");
+            return;
+        }
+
+        System.out.print("Entrez l'ID de l'admin qui valide : ");
+        Integer adminId = readInt(scanner);
+        if (adminId == null) return;
+
+        Admin admin = adminRepository.findById(adminId).orElse(null);
+        if (admin == null) {
+            System.out.println("❌ Admin introuvable !");
+            return;
+        }
+
+        System.out.print("Statut de validation (VALIDÉ / REFUSÉ) : ");
+        String status = scanner.nextLine().trim().toUpperCase();
+
+        System.out.print("Commentaires (optionnels) : ");
+        String comments = scanner.nextLine();
+
+        QuizValidation validation = quizValidationService.validateQuiz(quiz, admin, status, comments);
+
+        System.out.println("✅ Validation enregistrée avec succès !");
+        System.out.println("Validation ID: " + validation.getId());
     }
 
     // ====================== 🔹 Helpers ======================
