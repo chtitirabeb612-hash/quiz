@@ -2,6 +2,8 @@ package com.example.lastquiz;
 
 import com.example.lastquiz.entity.*;
 import com.example.lastquiz.repository.AdminRepository;
+import com.example.lastquiz.repository.ProfessorRepository;
+import com.example.lastquiz.repository.StudentRepository;
 import com.example.lastquiz.repository.SubscriptionRepository;
 import com.example.lastquiz.service.ComplaintService;
 import com.example.lastquiz.service.UserManagementService;
@@ -38,7 +40,13 @@ public class LastquizApplication implements CommandLineRunner {
     private QuizService quizService;
 
     @Autowired
+    private StudentRepository studentRepository;
+
+
+    @Autowired
     private QuizValidationService quizValidationService;
+    @Autowired
+    private ProfessorRepository professorRepository;
 
     public static void main(String[] args) {
         SpringApplication.run(LastquizApplication.class, args);
@@ -80,6 +88,7 @@ public class LastquizApplication implements CommandLineRunner {
         System.out.println("1 - Créer un utilisateur");
         System.out.println("2 - Modifier un utilisateur");
         System.out.println("3 - Supprimer un utilisateur");
+        System.out.println("4 - Consulter la liste des utilisateurs");
         System.out.print("Choisissez une option : ");
         String choice = scanner.nextLine().trim();
 
@@ -87,6 +96,7 @@ public class LastquizApplication implements CommandLineRunner {
             case "1" -> createUserConsole(scanner);
             case "2" -> updateUserConsole(scanner);
             case "3" -> deleteUserConsole(scanner);
+            case "4" -> listAllUsers();
             default -> System.out.println("Choix invalide.");
         }
     }
@@ -172,6 +182,56 @@ public class LastquizApplication implements CommandLineRunner {
             System.out.println("❌ " + e.getMessage());
         }
     }
+    private void listAllUsers() {
+        List<User> users = userManagementService.getAllUsers();
+
+        if (users.isEmpty()) {
+            System.out.println("Aucun utilisateur trouvé.");
+            return;
+        }
+
+        System.out.println("\n=== LISTE DES UTILISATEURS ===");
+
+        for (User u : users) {
+            System.out.println("--------------------------------------------");
+            System.out.println("ID: " + u.getId());
+            System.out.println("Username: " + u.getUsername());
+            System.out.println("Email: " + u.getEmail());
+            System.out.println("Rôle: " + u.getRole());
+            System.out.println("Créé le: " + u.getCreatedAt());
+
+            // 🔹 Afficher les infos selon le rôle
+            switch (u.getRole()) {
+                case STUDENT -> {
+                    Student s = studentRepository.findByUser(u).orElse(null);
+                    if (s != null) {
+                        System.out.println("Prénom: " + s.getFirstName());
+                        System.out.println("Nom: " + s.getLastName());
+                        System.out.println("Niveau: " + s.getLevel());
+                    }
+                }
+                case PROFESSOR -> {
+                    Professor p = professorRepository.findByUser(u).orElse(null);
+                    if (p != null) {
+                        System.out.println("Prénom: " + p.getFirstName());
+                        System.out.println("Nom: " + p.getLastName());
+                        System.out.println("Spécialité: " + p.getSpecialty());
+                    }
+                }
+                case ADMIN -> {
+                    Admin a = adminRepository.findByUser(u).orElse(null);
+                    if (a != null) {
+                        System.out.println("Prénom: " + a.getFirstName());
+                        System.out.println("Nom: " + a.getLastName());
+
+                    }
+                }
+            }
+        }
+
+        System.out.println("--------------------------------------------");
+    }
+
 
     // ====================== 🔹 MENU SUBSCRIPTIONS ======================
     private void manageSubscriptions(Scanner scanner) {
@@ -305,16 +365,22 @@ public class LastquizApplication implements CommandLineRunner {
 
         System.out.println("\n=== LISTE DES RÉCLAMATIONS ===");
         for (Complaint c : complaints) {
+            // Récupérer l'étudiant de manière sécurisée
+            Student student = c.getStudent();
+            String studentName = student != null
+                    ? student.getFirstName() + " " + student.getLastName()
+                    : "N/A";
+
             System.out.printf(
-                    "ID: %d | Étudiant: %s %s | Sujet: %s | Statut: %s%n",
+                    "ID: %d | Étudiant: %s | Sujet: %s | Statut: %s%n",
                     c.getId(),
-                    c.getStudent() != null ? c.getStudent().getFirstName() : "N/A",
-                    c.getStudent() != null ? c.getStudent().getLastName() : "",
+                    studentName,
                     c.getSubject(),
                     c.getStatus()
             );
         }
     }
+
 
     private void updateComplaintStatus(Scanner scanner) {
         System.out.print("Entrez l'ID de la réclamation à modifier : ");

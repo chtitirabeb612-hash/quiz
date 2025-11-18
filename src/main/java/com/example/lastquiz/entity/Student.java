@@ -13,6 +13,7 @@ import java.sql.Timestamp;
 public class Student {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "student_id")   // 🔥 nouveau nom de colonne
     private Integer id;
 
     @OneToOne

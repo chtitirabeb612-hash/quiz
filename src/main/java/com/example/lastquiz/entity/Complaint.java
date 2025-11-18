@@ -18,7 +18,7 @@ public class Complaint {
 
     // Étudiant qui a fait la réclamation
     @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "student_id", nullable = false)
     private Student student;
 
     private String subject;

@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -31,7 +32,7 @@ public class UserManagementService {
                         .user(savedUser)
                         .firstName(firstName)
                         .lastName(lastName)
-                        .level(extraInfo) // niveau
+                        .level(extraInfo)
                         .build();
                 studentRepository.save(student);
             }
@@ -40,7 +41,7 @@ public class UserManagementService {
                         .user(savedUser)
                         .firstName(firstName)
                         .lastName(lastName)
-                        .specialty(extraInfo) // spécialité
+                        .specialty(extraInfo)
                         .build();
                 professorRepository.save(professor);
             }
@@ -72,14 +73,12 @@ public class UserManagementService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé avec l'ID : " + id));
 
-        // Supprimer l'entité spécifique selon le rôle
         switch (user.getRole()) {
             case STUDENT -> studentRepository.findByUser(user).ifPresent(studentRepository::delete);
             case PROFESSOR -> professorRepository.findByUser(user).ifPresent(professorRepository::delete);
             case ADMIN -> adminRepository.findByUser(user).ifPresent(adminRepository::delete);
         }
 
-        // Supprimer le User
         userRepository.delete(user);
     }
 
@@ -94,5 +93,10 @@ public class UserManagementService {
 
     public Optional<Admin> findAdminByUser(User user) {
         return adminRepository.findByUser(user);
+    }
+
+    // ---------- Nouvelle méthode pour récupérer tous les utilisateurs ----------
+    public List<User> getAllUsers() {
+        return userRepository.findAll();
     }
 }
